@@ -1,0 +1,884 @@
+try(destroyDialog mipollPlacementRollout)catch()
+
+rollout mipollPlacementRollout "放置" width:136 height:255
+(
+	local Vatthedatlen, Vatthedatlen1, VattheDUOCdatlen, rotation_obj_function, prev_point, prev_mousepoint, fn_Rotate_Objs, firstpoint, asa, c, b
+	local khoangcachX, khoangcachY, khoangcachZ, khoangcachZmax, khoangcachZmin, khoangcachYmin, khoangcachYmax, khoangcachXmax, khoangcachXmin, kc_maxX, kc_maxZ, kc_maxY
+	
+	checkbutton 'btn_Placement' "放置" pos:[16,10] width:104 height:24 highlightColor:[171,58,68] toolTip:"Hold Shift: Rotate Left 90 CCWHold Ctrl: Rotate Right 90 CWHold Ctrl + Shift: Rotate 180Hold Ctrl + Alt: Up Direction" align:#left
+ 
+	checkbutton 'btn_PlaceClone' "放置克隆" pos:[15,37] width:104 height:24 highlightColor:[171,58,68] toolTip:"Hold Shift: Rotate Left 90 CCWHold Ctrl: Rotate Right 90 CWHold Ctrl + Shift: Rotate 180 Hold Ctrl + Alt: Up Direction" align:#left
+	
+	checkbutton 'btn_Rotate' "旋转" pos:[16,66] width:104 height:24 highlightColor:[171,58,68] align:#left
+	checkbox 'btn_UsePivot' "使用枢轴" pos:[32,98] width:104 height:16 highlightColor:[171,58,68] align:#left
+	checkbox 'btn_AutoParent' "自动父级" pos:[32,118] width:104 height:16 highlightColor:[171,58,68] align:#left
+		
+	checkbutton 'btn_Xmax' "+X " pos:[16,170] width:32 height:32 highlightColor:[171,58,68] align:#left
+	checkbutton 'btn_Ymax' "+Y " pos:[52,170] width:32 height:32 highlightColor:[171,58,68] align:#left
+	checkbutton 'btn_Zmax' "+Z " pos:[88,170] width:32 height:32 highlightColor:[171,58,68] checked:true align:#left
+	checkbutton 'btn_Xmin' "-X " pos:[16,202] width:32 height:32 highlightColor:[171,58,68] align:#left
+	checkbutton 'btn_Ymin' "-Y " pos:[52,202] width:32 height:32 highlightColor:[171,58,68] align:#left
+	checkbutton 'btn_Zmin' "-Z " pos:[88,202] width:32 height:32 highlightColor:[171,58,68] align:#left
+	label 'lbl' "物体上轴" pos:[32,146] width:72 height:16 highlightColor:[171,58,68] align:#left
+	
+	fn btn_Axis_off = ( btn_Xmax.checked = btn_Ymax.checked = btn_Zmax.checked = btn_Xmin.checked = btn_Ymin.checked = btn_Zmin.checked = false)
+	fn filter_geometry obj = superclassof obj == GeometryClass and classof obj != TargetObject	
+	
+	fn fn_Rotate_Objs mp =
+	(
+		try
+		(
+			asa = (mp - prev_mousepoint).y
+			
+			if mipollPlacementRollout.btn_Xmax.checked == true do 
+				(in coordsys local ( rotate selection (eulerangles asa 0 0)))
+			if mipollPlacementRollout.btn_Xmin.checked == true do 
+				(in coordsys local ( rotate selection (eulerangles asa 0 0)))
+			if mipollPlacementRollout.btn_Ymax.checked == true do 
+				(in coordsys local ( rotate selection (eulerangles 0 asa 0)))
+			if mipollPlacementRollout.btn_Ymin.checked == true do 
+				(in coordsys local ( rotate selection (eulerangles 0 asa 0)))
+			if mipollPlacementRollout.btn_Zmax.checked == true do 
+				(in coordsys local ( rotate selection (eulerangles 0 0 asa)))
+			if mipollPlacementRollout.btn_Zmin.checked == true do 
+				(in coordsys local ( rotate selection (eulerangles 0 0 asa)))
+		)
+		catch ()
+	)
+	
+	fn fn_Offset_Objs mp =
+	(
+		try
+		(
+			asa = -((mp - firstpoint).y)/4
+			
+			if mipollPlacementRollout.btn_Xmax.checked == true do 
+				(in coordsys local ( selection.pos = [asa, 0, 0]))
+			if mipollPlacementRollout.btn_Xmin.checked == true do 
+				(in coordsys local ( move selection [asa, 0, 0]))
+			if mipollPlacementRollout.btn_Ymax.checked == true do 
+				(in coordsys local ( move selection [0, asa, 0]))
+			if mipollPlacementRollout.btn_Ymin.checked == true do 
+				(in coordsys local ( move selection [0, asa, 0]))
+			if mipollPlacementRollout.btn_Zmax.checked == true do 
+				(
+					--in coordsys local ( move selection [0, 0, 5000])
+					--firstpos = $.pos
+					--in coordsys local ( move selection [0, 0, -5000])
+					--selection.pos = [0, 0, asa]
+					--$.pos = firstpos - $.dir*asa
+					
+					in coordsys #local (move $ [0,0,asa])
+				)
+			if mipollPlacementRollout.btn_Zmin.checked == true do 
+				(in coordsys local ( move selection [0, 0, asa]))
+		)
+		catch ()
+	)
+	
+	
+	
+-- 	on mipollPlacementRollout open do
+-- 		(
+-- 			MaxVersion()
+-- 			if (MaxVersion())[1] == 14000 or (MaxVersion())[1] == 13000 or (MaxVersion())[1] == 12000 or (MaxVersion())[1] == 11000 or (MaxVersion())[1] == 10000 then ()
+-- 			else 
+-- 				( 
+-- 					try (destroydialog mipollPlacementRollout ) catch()
+-- 					messagebox "This Script is not compatible with this 3ds Max version. Please, check for update at http://mipollstudio.blogspot.com/" 
+-- 				)
+-- 				
+-- 		)
+	
+	on btn_Placement changed state do
+	( 
+		undo on
+		(
+			btn_Rotate.checked = false
+			if btn_Placement.checked == true then 
+				(
+					VattheDUOCdatlen = for o in geometry where not o.isSelected collect o
+						
+					if selection.count == 0 do 
+						( 
+							btn_Placement.checked = false 
+							messagebox "Select 1 object or 1 group.Chon 1 vat the hoac 1 nh."
+						)
+					if selection.count == 1 do 
+							( 
+								Vatthedatlen = $
+								global Vatthedatlen_TM = Vatthedatlen.transform
+								global Vatthedatlen_SC = Vatthedatlen.scale
+								if mipollPlacementRollout.btn_UsePivot.checked == false do
+								(
+									Vatthedatlen.transform = (matrix3 [1,0,0] [0,1,0] [0,0,1] Vatthedatlen.pos)
+									Vatthedatlen.scale = Vatthedatlen_SC
+									khoangcachZ = Vatthedatlen.pos.z - Vatthedatlen.center.z
+									khoangcachX = Vatthedatlen.pos.x - Vatthedatlen.center.x
+									khoangcachY = Vatthedatlen.pos.y - Vatthedatlen.center.y
+									khoangcachZmax = (Vatthedatlen.pos.z - Vatthedatlen.min.z)
+									khoangcachZmin = (Vatthedatlen.pos.z - Vatthedatlen.max.z)
+									khoangcachYmax = (Vatthedatlen.pos.y - Vatthedatlen.min.y)
+									khoangcachYmin = (Vatthedatlen.pos.y - Vatthedatlen.max.y)
+									khoangcachXmax = (Vatthedatlen.pos.x - Vatthedatlen.min.x)
+									khoangcachXmin = (Vatthedatlen.pos.x - Vatthedatlen.max.x)
+									kc_maxX = (Vatthedatlen.max.x - Vatthedatlen.min.x)
+									kc_maxY = (Vatthedatlen.max.y - Vatthedatlen.min.y)
+									kc_maxZ = (Vatthedatlen.max.z - Vatthedatlen.min.z)
+								)
+								fn get_normal_function msg ir obj faceNum shift ctrl alt =
+									(
+									if msg == #freeMove then
+										(
+										if ir != undefined then
+										(
+											Vatthedatlen.transform = (matrix3 [1,0,0] [0,1,0] [0,0,1] [0,0,0])
+											Vatthedatlen.scale = Vatthedatlen_SC
+											Vatthedatlen.pos = ir.pos
+											Vatthedatlen.dir = ir.dir
+												
+												
+											if mipollPlacementRollout.btn_Xmax.checked == true do 
+												(
+													in coordsys local 
+														(  
+															rotate Vatthedatlen (eulerangles -90 -90 0)
+															if mipollPlacementRollout.btn_UsePivot.checked == false do ( move Vatthedatlen [khoangcachXmax,khoangcachY,khoangcachZ] )
+														)
+												)
+											if mipollPlacementRollout.btn_Xmin.checked == true do 
+												(
+													in coordsys local 
+														(  
+															rotate Vatthedatlen (eulerangles -90 90 0)
+															if mipollPlacementRollout.btn_UsePivot.checked == false do ( move Vatthedatlen [khoangcachXmin,khoangcachY,khoangcachZ] )
+														)
+												)
+											if mipollPlacementRollout.btn_Ymax.checked == true do 
+												(
+													in coordsys local 
+														( 
+															rotate Vatthedatlen (eulerangles 90 0 180)
+															if mipollPlacementRollout.btn_UsePivot.checked == false do ( move Vatthedatlen [khoangcachX,khoangcachYmax,khoangcachZ] )
+														)
+												)
+											if mipollPlacementRollout.btn_Ymin.checked == true do 
+												(
+													in coordsys local 
+														(  
+															rotate Vatthedatlen (eulerangles -90 0 0)
+															if mipollPlacementRollout.btn_UsePivot.checked == false do ( move Vatthedatlen [khoangcachX,khoangcachYmin,khoangcachZ] )
+														)
+												)
+											if mipollPlacementRollout.btn_Zmax.checked == true do 
+												(
+													if mipollPlacementRollout.btn_UsePivot.checked == false do
+													(in coordsys local (  move Vatthedatlen [khoangcachX,khoangcachY,khoangcachZmax] ))
+												)
+											if mipollPlacementRollout.btn_Zmin.checked == true do 
+												(
+													Vatthedatlen.dir *= -1
+													in coordsys local 
+														( 
+															--rotate Vatthedatlen (eulerangles 0 0 180)
+															if mipollPlacementRollout.btn_UsePivot.checked == false do (  move Vatthedatlen [khoangcachX,khoangcachY,khoangcachZmin] )
+														)
+												)
+											
+											if alt and ctrl then
+											(
+												case of
+												(
+													(btn_Xmax.checked == true) : 
+													(
+														Vatthedatlen.pos = ir.pos
+														--Vatthedatlen.dir = ir.dir
+														if mipollPlacementRollout.btn_UsePivot.checked == false do
+														(in coordsys local (  move Vatthedatlen [khoangcachX,khoangcachY,khoangcachZmax] ))
+														Vatthedatlen.dir = [1,0,0]
+														in coordsys local (  rotate Vatthedatlen (eulerangles 0 90 0) )
+													)
+													(btn_Xmin.checked == true) : 
+														(
+															Vatthedatlen.pos = ir.pos
+															Vatthedatlen.dir = ir.dir
+															if mipollPlacementRollout.btn_UsePivot.checked == false do
+															(in coordsys local (  move Vatthedatlen [khoangcachX,khoangcachY,khoangcachZmax] ))
+															Vatthedatlen.dir = [0,0,1]
+															in coordsys local (  rotate Vatthedatlen (eulerangles -90 0 0) )
+														)
+													(btn_Ymax.checked == true) : 
+														(
+															Vatthedatlen.pos = ir.pos
+															Vatthedatlen.dir = ir.dir
+															if mipollPlacementRollout.btn_UsePivot.checked == false do
+															(in coordsys local (  move Vatthedatlen [khoangcachX,khoangcachY,khoangcachZmax] ))
+															Vatthedatlen.dir = [0,0,1]
+															in coordsys local (  rotate Vatthedatlen (eulerangles 0 90 0) )
+														)
+													(btn_Ymin.checked == true) : 
+														(
+															Vatthedatlen.pos = ir.pos
+															Vatthedatlen.dir = ir.dir
+															if mipollPlacementRollout.btn_UsePivot.checked == false do
+															(in coordsys local (  move Vatthedatlen [khoangcachX,khoangcachY,khoangcachZmax] ))
+															Vatthedatlen.dir = [0,0,1]
+															in coordsys local (  rotate Vatthedatlen (eulerangles 0 -90 0) )
+														)
+													
+													(btn_Zmax.checked == true) : 
+														(
+															Vatthedatlen.dir = [0,0,1]
+														)
+													(btn_Zmin.checked == true) : 
+													(
+														Vatthedatlen.pos = ir.pos
+														Vatthedatlen.dir = ir.dir
+														if mipollPlacementRollout.btn_UsePivot.checked == false do
+														(in coordsys local (  move Vatthedatlen [khoangcachX,khoangcachY,khoangcachZmax] ))
+														Vatthedatlen.dir = [0,0,1]
+													)
+												)
+												
+											)
+											if shift then 
+											(
+												case of
+												(
+													(btn_Xmax.checked == true) : ( in coordsys local (rotate Vatthedatlen (eulerangles 90 0 0)) )
+													(btn_Xmin.checked == true) : ( in coordsys local (rotate Vatthedatlen (eulerangles -90 0 0)) )
+													(btn_Ymax.checked == true) : ( in coordsys local (rotate Vatthedatlen (eulerangles 0 90 0)) )
+													(btn_Ymin.checked == true) : ( in coordsys local (rotate Vatthedatlen (eulerangles 0 -90 0)) )
+													(btn_Zmax.checked == true) : ( in coordsys local (rotate Vatthedatlen (eulerangles 0 0 90)) )
+													(btn_Zmin.checked == true) : ( in coordsys local (rotate Vatthedatlen (eulerangles 0 0 -90)) )
+												)
+												
+											)
+											if ctrl then 
+											(
+												case of
+												(
+													(btn_Xmax.checked == true) : ( in coordsys local (rotate Vatthedatlen (eulerangles -90 0 0)) )
+													(btn_Xmin.checked == true) : ( in coordsys local (rotate Vatthedatlen (eulerangles 90 0 0)) )
+													(btn_Ymax.checked == true) : ( in coordsys local (rotate Vatthedatlen (eulerangles 0 -90 0)) )
+													(btn_Ymin.checked == true) : ( in coordsys local (rotate Vatthedatlen (eulerangles 0 90 0)) )
+													(btn_Zmax.checked == true) : ( in coordsys local (rotate Vatthedatlen (eulerangles 0 0 -90)) )
+													(btn_Zmin.checked == true) : ( in coordsys local (rotate Vatthedatlen (eulerangles 0 0 90)) )
+												)
+											)
+											if ctrl and shift then 
+											(
+												case of
+												(
+													(btn_Xmax.checked == true) : ( in coordsys local (rotate Vatthedatlen (eulerangles -180 0 0)) )
+													(btn_Xmin.checked == true) : ( in coordsys local (rotate Vatthedatlen (eulerangles 180 0 0)) )
+													(btn_Ymax.checked == true) : ( in coordsys local (rotate Vatthedatlen (eulerangles 0 -180 0)) )
+													(btn_Ymin.checked == true) : ( in coordsys local (rotate Vatthedatlen (eulerangles 0 180 0)) )
+													(btn_Zmax.checked == true) : ( in coordsys local (rotate Vatthedatlen (eulerangles 0 0 -180)) )
+													(btn_Zmin.checked == true) : ( in coordsys local (rotate Vatthedatlen (eulerangles 0 0 180)) )
+												)
+											)
+											return #continue
+										)
+										else
+										(
+											return #continue
+										)
+										)
+									if msg == #mouseAbort then 
+										(
+											Vatthedatlen.transform = Vatthedatlen_TM
+											btn_Placement.checked = false
+											return #end
+										)
+									if msg == #mousePoint then 
+										(
+											if mipollPlacementRollout.btn_AutoParent.checked == true do Vatthedatlen.parent = obj
+											btn_Placement.checked = false
+											return #end
+										)
+										else
+										(
+										)
+										
+									)
+								a = mouseTrack on:VattheDUOCdatlen trackCallBack:get_normal_function
+							)
+					if selection.count > 1 do 
+							(
+								b = for i in selection where (isGroupHead i == true) collect i
+								if b.count == 0 then 
+									(
+										btn_Placement.checked = false
+										messagebox "Select 1 object or 1 group
+	Chon 1 vat the hoac 1 nh髆."
+									)
+								else 
+									(
+										b = for i in selection where (isGroupHead i == true) collect i
+										Vatthedatlen = b[1]
+										global Vatthedatlen_TM = Vatthedatlen.transform
+										global Vatthedatlen_SC = Vatthedatlen.scale
+										if mipollPlacementRollout.btn_UsePivot.checked == false do
+										(
+											Vatthedatlen.transform = (matrix3 [1,0,0] [0,1,0] [0,0,1] Vatthedatlen.pos)
+											Vatthedatlen.scale = Vatthedatlen_SC
+											khoangcachZ = Vatthedatlen.pos.z - Vatthedatlen.center.z
+											khoangcachX = Vatthedatlen.pos.x - Vatthedatlen.center.x
+											khoangcachY = Vatthedatlen.pos.y - Vatthedatlen.center.y
+											khoangcachZmax = (Vatthedatlen.pos.z - Vatthedatlen.min.z)
+											khoangcachZmin = (Vatthedatlen.pos.z - Vatthedatlen.max.z)
+											khoangcachYmax = (Vatthedatlen.pos.y - Vatthedatlen.min.y)
+											khoangcachYmin = (Vatthedatlen.pos.y - Vatthedatlen.max.y)
+											khoangcachXmax = (Vatthedatlen.pos.x - Vatthedatlen.min.x)
+											khoangcachXmin = (Vatthedatlen.pos.x - Vatthedatlen.max.x)
+										)
+										fn get_normal_function msg ir obj faceNum shift ctrl alt =
+											(
+											if msg == #freeMove then
+												(
+												if ir != undefined then
+												(
+													Vatthedatlen.transform = (matrix3 [1,0,0] [0,1,0] [0,0,1] [0,0,0])
+													Vatthedatlen.scale = Vatthedatlen_SC
+													Vatthedatlen.pos = ir.pos
+													Vatthedatlen.dir = ir.dir
+														
+														
+													if mipollPlacementRollout.btn_Xmax.checked == true do 
+														(
+															in coordsys local 
+																(  
+																	rotate Vatthedatlen (eulerangles -90 -90 0)
+																	if mipollPlacementRollout.btn_UsePivot.checked == false do ( move Vatthedatlen [khoangcachXmax,khoangcachY,khoangcachZ] )
+																)
+														)
+													if mipollPlacementRollout.btn_Xmin.checked == true do 
+														(
+															in coordsys local 
+																(  
+																	rotate Vatthedatlen (eulerangles -90 90 0)
+																	if mipollPlacementRollout.btn_UsePivot.checked == false do ( move Vatthedatlen [khoangcachXmin,khoangcachY,khoangcachZ] )
+																)
+														)
+													if mipollPlacementRollout.btn_Ymax.checked == true do 
+														(
+															in coordsys local 
+																( 
+																	rotate Vatthedatlen (eulerangles 90 0 180)
+																	if mipollPlacementRollout.btn_UsePivot.checked == false do ( move Vatthedatlen [khoangcachX,khoangcachYmax,khoangcachZ] )
+																)
+														)
+													if mipollPlacementRollout.btn_Ymin.checked == true do 
+														(
+															in coordsys local 
+																(  
+																	rotate Vatthedatlen (eulerangles -90 0 0)
+																	if mipollPlacementRollout.btn_UsePivot.checked == false do ( move Vatthedatlen [khoangcachX,khoangcachYmin,khoangcachZ] )
+																)
+														)
+													if mipollPlacementRollout.btn_Zmax.checked == true do 
+														(
+															if mipollPlacementRollout.btn_UsePivot.checked == false do
+															(in coordsys local (  move Vatthedatlen [khoangcachX,khoangcachY,khoangcachZmax] ))
+														)
+													if mipollPlacementRollout.btn_Zmin.checked == true do 
+														(
+															Vatthedatlen.dir *= -1
+															in coordsys local 
+																( 
+																	--rotate Vatthedatlen (eulerangles 0 0 180)
+																	if mipollPlacementRollout.btn_UsePivot.checked == false do (  move Vatthedatlen [khoangcachX,khoangcachY,khoangcachZmin] )
+																)
+														)
+													
+													if alt and ctrl then
+													(
+														case of
+														(
+															(btn_Xmax.checked == true) : 
+															(
+																Vatthedatlen.pos = ir.pos
+																--Vatthedatlen.dir = ir.dir
+																if mipollPlacementRollout.btn_UsePivot.checked == false do
+																(in coordsys local (  move Vatthedatlen [khoangcachX,khoangcachY,khoangcachZmax] ))
+																Vatthedatlen.dir = [1,0,0]
+																in coordsys local (  rotate Vatthedatlen (eulerangles 0 90 0) )
+															)
+															(btn_Xmin.checked == true) : 
+																(
+																	Vatthedatlen.pos = ir.pos
+																	Vatthedatlen.dir = ir.dir
+																	if mipollPlacementRollout.btn_UsePivot.checked == false do
+																	(in coordsys local (  move Vatthedatlen [khoangcachX,khoangcachY,khoangcachZmax] ))
+																	Vatthedatlen.dir = [0,0,1]
+																	in coordsys local (  rotate Vatthedatlen (eulerangles -90 0 0) )
+																)
+															(btn_Ymax.checked == true) : 
+																(
+																	Vatthedatlen.pos = ir.pos
+																	Vatthedatlen.dir = ir.dir
+																	if mipollPlacementRollout.btn_UsePivot.checked == false do
+																	(in coordsys local (  move Vatthedatlen [khoangcachX,khoangcachY,khoangcachZmax] ))
+																	Vatthedatlen.dir = [0,0,1]
+																	in coordsys local (  rotate Vatthedatlen (eulerangles 0 90 0) )
+																)
+															(btn_Ymin.checked == true) : 
+																(
+																	Vatthedatlen.pos = ir.pos
+																	Vatthedatlen.dir = ir.dir
+																	if mipollPlacementRollout.btn_UsePivot.checked == false do
+																	(in coordsys local (  move Vatthedatlen [khoangcachX,khoangcachY,khoangcachZmax] ))
+																	Vatthedatlen.dir = [0,0,1]
+																	in coordsys local (  rotate Vatthedatlen (eulerangles 0 -90 0) )
+																)
+															
+															(btn_Zmax.checked == true) : 
+																(
+																	Vatthedatlen.dir = [0,0,1]
+																)
+															(btn_Zmin.checked == true) : 
+															(
+																Vatthedatlen.pos = ir.pos
+																Vatthedatlen.dir = ir.dir
+																if mipollPlacementRollout.btn_UsePivot.checked == false do
+																(in coordsys local (  move Vatthedatlen [khoangcachX,khoangcachY,khoangcachZmax] ))
+																Vatthedatlen.dir = [0,0,1]
+															)
+														)
+														
+													)
+													if shift then 
+													(
+														case of
+														(
+															(btn_Xmax.checked == true) : ( in coordsys local (rotate Vatthedatlen (eulerangles 90 0 0)) )
+															(btn_Xmin.checked == true) : ( in coordsys local (rotate Vatthedatlen (eulerangles -90 0 0)) )
+															(btn_Ymax.checked == true) : ( in coordsys local (rotate Vatthedatlen (eulerangles 0 90 0)) )
+															(btn_Ymin.checked == true) : ( in coordsys local (rotate Vatthedatlen (eulerangles 0 -90 0)) )
+															(btn_Zmax.checked == true) : ( in coordsys local (rotate Vatthedatlen (eulerangles 0 0 90)) )
+															(btn_Zmin.checked == true) : ( in coordsys local (rotate Vatthedatlen (eulerangles 0 0 -90)) )
+														)
+														
+													)
+													if ctrl then 
+													(
+														case of
+														(
+															(btn_Xmax.checked == true) : ( in coordsys local (rotate Vatthedatlen (eulerangles -90 0 0)) )
+															(btn_Xmin.checked == true) : ( in coordsys local (rotate Vatthedatlen (eulerangles 90 0 0)) )
+															(btn_Ymax.checked == true) : ( in coordsys local (rotate Vatthedatlen (eulerangles 0 -90 0)) )
+															(btn_Ymin.checked == true) : ( in coordsys local (rotate Vatthedatlen (eulerangles 0 90 0)) )
+															(btn_Zmax.checked == true) : ( in coordsys local (rotate Vatthedatlen (eulerangles 0 0 -90)) )
+															(btn_Zmin.checked == true) : ( in coordsys local (rotate Vatthedatlen (eulerangles 0 0 90)) )
+														)
+													)
+													if ctrl and shift then 
+													(
+														case of
+														(
+															(btn_Xmax.checked == true) : ( in coordsys local (rotate Vatthedatlen (eulerangles -180 0 0)) )
+															(btn_Xmin.checked == true) : ( in coordsys local (rotate Vatthedatlen (eulerangles 180 0 0)) )
+															(btn_Ymax.checked == true) : ( in coordsys local (rotate Vatthedatlen (eulerangles 0 -180 0)) )
+															(btn_Ymin.checked == true) : ( in coordsys local (rotate Vatthedatlen (eulerangles 0 180 0)) )
+															(btn_Zmax.checked == true) : ( in coordsys local (rotate Vatthedatlen (eulerangles 0 0 -180)) )
+															(btn_Zmin.checked == true) : ( in coordsys local (rotate Vatthedatlen (eulerangles 0 0 180)) )
+														)
+													)
+													return #continue
+												)
+												else
+												(
+													return #continue
+												)
+												)
+											if msg == #mouseAbort then 
+												(
+													Vatthedatlen.transform = Vatthedatlen_TM
+													btn_Placement.checked = false
+													return #end
+												)
+											if msg == #mousePoint then 
+												(
+													if mipollPlacementRollout.btn_AutoParent.checked == true do Vatthedatlen.parent = obj
+													btn_Placement.checked = false
+													return #end
+												)
+												else
+												(
+												)
+												
+											)
+										a = mouseTrack on:VattheDUOCdatlen trackCallBack:get_normal_function
+									)
+							)
+				)
+			else (  )
+		)
+	)
+	on btn_PlaceClone changed state do
+	( 
+		undo on
+		(
+			btn_Rotate.checked = false
+			if btn_PlaceClone.checked == true then 
+				(
+					VattheDUOCdatlen = for o in geometry where not o.isSelected collect o
+					if selection.count == 0 do
+						( 
+							btn_PlaceClone.checked = false 
+							messagebox "Select 1 object or 1 group.
+	Chon 1 vat the hoac 1 nh髆."
+						)
+					if selection.count == 1 do 
+							( 
+								Vatthedatlen = $
+								global Vatthedatlen_TM = Vatthedatlen.transform
+								if mipollPlacementRollout.btn_UsePivot.checked == false do
+								(
+									Vatthedatlen.transform = (matrix3 [1,0,0] [0,1,0] [0,0,1] Vatthedatlen.pos)
+									khoangcachZ = Vatthedatlen.pos.z - Vatthedatlen.center.z
+									khoangcachX = Vatthedatlen.pos.x - Vatthedatlen.center.x
+									khoangcachY = Vatthedatlen.pos.y - Vatthedatlen.center.y
+									khoangcachZmax = (Vatthedatlen.pos.z - Vatthedatlen.min.z)
+									khoangcachZmin = (Vatthedatlen.pos.z - Vatthedatlen.max.z)
+									khoangcachYmax = (Vatthedatlen.pos.y - Vatthedatlen.min.y)
+									khoangcachYmin = (Vatthedatlen.pos.y - Vatthedatlen.max.y)
+									khoangcachXmax = (Vatthedatlen.pos.x - Vatthedatlen.min.x)
+									khoangcachXmin = (Vatthedatlen.pos.x - Vatthedatlen.max.x)
+								)
+								fn get_normal_function_Clone msg ir obj faceNum shift ctrl alt =
+										(
+										if msg == #freeMove then
+											(
+											if ir != undefined then
+											(
+												select Vatthedatlen
+												Vatthedatlen.transform = (matrix3 [1,0,0] [0,1,0] [0,0,1] [0,0,0])
+												Vatthedatlen.pos = ir.pos
+												Vatthedatlen.dir = ir.dir
+													
+													
+												if mipollPlacementRollout.btn_Xmax.checked == true do 
+													(
+														in coordsys local 
+															(  
+																rotate Vatthedatlen (eulerangles 0 -90 0)
+																if mipollPlacementRollout.btn_UsePivot.checked == false do ( move Vatthedatlen [khoangcachXmax,khoangcachY,khoangcachZ] )
+															)
+													)
+												if mipollPlacementRollout.btn_Xmin.checked == true do 
+													(
+														in coordsys local 
+															(  
+																rotate Vatthedatlen (eulerangles 0 90 0)
+																if mipollPlacementRollout.btn_UsePivot.checked == false do ( move Vatthedatlen [khoangcachXmin,khoangcachY,khoangcachZ] )
+															)
+													)
+												if mipollPlacementRollout.btn_Ymax.checked == true do 
+													(
+														in coordsys local 
+															( 
+																rotate Vatthedatlen (eulerangles 90 0 0)
+																if mipollPlacementRollout.btn_UsePivot.checked == false do ( move Vatthedatlen [khoangcachX,khoangcachYmax,khoangcachZ] )
+															)
+													)
+												if mipollPlacementRollout.btn_Ymin.checked == true do 
+													(
+														in coordsys local 
+															(  
+																rotate Vatthedatlen (eulerangles -90 0 0)
+																if mipollPlacementRollout.btn_UsePivot.checked == false do ( move Vatthedatlen [khoangcachX,khoangcachYmin,khoangcachZ] )
+															)
+													)
+												if mipollPlacementRollout.btn_Zmax.checked == true do 
+													(
+														if mipollPlacementRollout.btn_UsePivot.checked == false do
+														(in coordsys local (  move Vatthedatlen [khoangcachX,khoangcachY,khoangcachZmax] ))
+													)
+												if mipollPlacementRollout.btn_Zmin.checked == true do 
+													(
+														Vatthedatlen.dir *= -1
+														in coordsys local 
+															( 
+																--rotate Vatthedatlen (eulerangles 0 0 180)
+																if mipollPlacementRollout.btn_UsePivot.checked == false do (  move Vatthedatlen [khoangcachX,khoangcachY,khoangcachZmin] )
+															)
+													)
+												
+												if shift then (Vatthedatlen.dir = [0,0,1])
+												if ctrl then in coordsys local (rotate Vatthedatlen (eulerangles 0 0 90))
+												if alt then in coordsys local (rotate Vatthedatlen (eulerangles 0 0 -90))
+												if shift and ctrl then (Vatthedatlen.dir *= -1)
+												return #continue
+											)
+											else
+											(
+												return #continue
+											)
+											)
+										if msg == #mouseAbort then 
+											(
+												Vatthedatlen.transform = Vatthedatlen_TM
+												btn_PlaceClone.checked = false
+												return #end
+											)
+										if msg == #mousePoint then 
+											(
+												if (isGroupHead Vatthedatlen) == true then 
+												(
+													select Vatthedatlen
+													print selection.count
+													maxOps.cloneNodes $ cloneType:#instance newNodes:&nnl
+												)
+												else 
+												(
+													Vatthedatlen1 = instance Vatthedatlen
+													Vatthedatlen1.wirecolor = Vatthedatlen.wirecolor
+												)
+												return #continue
+											)
+											else
+											(
+												btn_PlaceClone.checked = false
+												return #end
+											)
+										)
+									a = mouseTrack on:VattheDUOCdatlen trackCallBack:get_normal_function_Clone
+							)
+						if selection.count > 1 do 
+							(
+								b = for i in selection where (isGroupHead i == true) collect i
+								if b.count == 0 then 
+									(
+										btn_PlaceClone.checked = false
+										messagebox "Select 1 object or 1 group
+	Chon 1 vat the hoac 1 nh髆."
+									)
+								else 
+									(
+										b = for i in selection where (isGroupHead i == true) collect i
+										c = for i in selection collect i
+										Vatthedatlen = b[1]
+										global Vatthedatlen_TM = Vatthedatlen.transform
+										if mipollPlacementRollout.btn_UsePivot.checked == false do
+										(
+											Vatthedatlen.transform = (matrix3 [1,0,0] [0,1,0] [0,0,1] Vatthedatlen.pos)
+											khoangcachZ = Vatthedatlen.pos.z - Vatthedatlen.center.z
+											khoangcachX = Vatthedatlen.pos.x - Vatthedatlen.center.x
+											khoangcachY = Vatthedatlen.pos.y - Vatthedatlen.center.y
+											khoangcachZmax = (Vatthedatlen.pos.z - Vatthedatlen.min.z)
+											khoangcachZmin = (Vatthedatlen.pos.z - Vatthedatlen.max.z)
+											khoangcachYmax = (Vatthedatlen.pos.y - Vatthedatlen.min.y)
+											khoangcachYmin = (Vatthedatlen.pos.y - Vatthedatlen.max.y)
+											khoangcachXmax = (Vatthedatlen.pos.x - Vatthedatlen.min.x)
+											khoangcachXmin = (Vatthedatlen.pos.x - Vatthedatlen.max.x)
+										)
+										fn get_normal_function_Clone msg ir obj faceNum shift ctrl alt =
+											(
+											if msg == #freeMove then
+												(
+												if ir != undefined then
+												(
+													select Vatthedatlen
+													Vatthedatlen.transform = (matrix3 [1,0,0] [0,1,0] [0,0,1] [0,0,0])
+													Vatthedatlen.pos = ir.pos
+													Vatthedatlen.dir = ir.dir
+														
+														
+													if mipollPlacementRollout.btn_Xmax.checked == true do 
+														(
+															in coordsys local 
+																(  
+																	rotate Vatthedatlen (eulerangles 0 -90 0)
+																	if mipollPlacementRollout.btn_UsePivot.checked == false do ( move Vatthedatlen [khoangcachXmax,khoangcachY,khoangcachZ] )
+																)
+														)
+													if mipollPlacementRollout.btn_Xmin.checked == true do 
+														(
+															in coordsys local 
+																(  
+																	rotate Vatthedatlen (eulerangles 0 90 0)
+																	if mipollPlacementRollout.btn_UsePivot.checked == false do ( move Vatthedatlen [khoangcachXmin,khoangcachY,khoangcachZ] )
+																)
+														)
+													if mipollPlacementRollout.btn_Ymax.checked == true do 
+														(
+															in coordsys local 
+																( 
+																	rotate Vatthedatlen (eulerangles 90 0 0)
+																	if mipollPlacementRollout.btn_UsePivot.checked == false do ( move Vatthedatlen [khoangcachX,khoangcachYmax,khoangcachZ] )
+																)
+														)
+													if mipollPlacementRollout.btn_Ymin.checked == true do 
+														(
+															in coordsys local 
+																(  
+																	rotate Vatthedatlen (eulerangles -90 0 0)
+																	if mipollPlacementRollout.btn_UsePivot.checked == false do ( move Vatthedatlen [khoangcachX,khoangcachYmin,khoangcachZ] )
+																)
+														)
+													if mipollPlacementRollout.btn_Zmax.checked == true do 
+														(
+															if mipollPlacementRollout.btn_UsePivot.checked == false do
+															(in coordsys local (  move Vatthedatlen [khoangcachX,khoangcachY,khoangcachZmax] ))
+														)
+													if mipollPlacementRollout.btn_Zmin.checked == true do 
+														(
+															Vatthedatlen.dir *= -1
+															in coordsys local 
+																( 
+																	--rotate Vatthedatlen (eulerangles 0 0 180)
+																	if mipollPlacementRollout.btn_UsePivot.checked == false do (  move Vatthedatlen [khoangcachX,khoangcachY,khoangcachZmin] )
+																)
+														)
+													
+													if shift then (Vatthedatlen.dir = [0,0,1])
+													if ctrl then in coordsys local (rotate Vatthedatlen (eulerangles 0 0 90))
+													if alt then in coordsys local (rotate Vatthedatlen (eulerangles 0 0 -90))
+													if shift and ctrl then (Vatthedatlen.dir *= -1)
+													return #continue
+												)
+												else
+												(
+													return #continue
+												)
+												)
+											if msg == #mouseAbort then 
+												(
+													Vatthedatlen.transform = Vatthedatlen_TM
+													btn_PlaceClone.checked = false
+													return #end
+												)
+											if msg == #mousePoint then 
+												(
+													if (isGroupHead Vatthedatlen) == true then 
+													(
+														select Vatthedatlen
+														print selection.count
+														maxOps.cloneNodes $ cloneType:#instance newNodes:&nnl
+													)
+													else 
+													(
+														Vatthedatlen1 = instance Vatthedatlen
+														Vatthedatlen1.wirecolor = Vatthedatlen.wirecolor
+													)
+													return #continue
+												)
+												else
+												(
+													btn_PlaceClone.checked = false
+													return #end
+												)
+											)
+										a = mouseTrack on:VattheDUOCdatlen trackCallBack:get_normal_function_Clone
+									)
+							)
+						)
+			else (  )
+		)
+	)
+	on btn_Rotate changed state do
+	( 
+		undo on
+		(
+			btn_UsePivot.checked = btn_AutoParent.checked = btn_Placement.checked = btn_PlaceClone.checked = false
+			if btn_Rotate.checked == true then 
+				(
+					if selection.count == 0 do
+						(
+							btn_Rotate.checked = false
+							messagebox "Select object.Chon vat the."
+						)
+					if selection.count >= 1 do
+						(
+							tool Rotate_Objs
+							(
+								on start do
+								(
+								)
+								
+								on mousePoint clickno do 
+								(
+									prev_point  = viewPoint
+									prev_mousepoint = mousePoint
+									if clickno == 1 then ( firstpoint = viewPoint )
+								)
+								
+								on mouseMove a do
+								(
+									--if shiftKey == true or ctrlKey == true and lButton == true then 
+									--(
+										--if shiftKey == true do fn_Rotate_Objs viewPoint
+										--if ctrlKey == true do fn_Offset_Objs viewPoint
+									--)
+									--else
+									--(
+										if lButton == true do ( fn_Rotate_Objs viewPoint )
+										prev_point  = worldPoint
+										prev_mousepoint = viewPoint
+									--)
+								)
+								
+								on freeMove do
+								(
+								)
+								
+								on abort do 
+								( btn_Rotate.checked = false )
+								
+								on stop do 
+								( btn_Rotate.checked = false )
+							)
+							startTool Rotate_Objs
+						)
+				)
+			else()
+		)
+	)
+	on btn_UsePivot changed state do
+	( 
+		btn_Rotate.checked = false
+		if btn_UsePivot.checked == true then ()
+		else ()
+	)
+	on btn_AutoParent changed state do
+	( 
+		btn_Rotate.checked = false
+		if btn_AutoParent.checked == true then ()
+		else ()
+	)
+	on btn_Xmax changed state do
+	( 
+		btn_Axis_off() 
+		btn_Xmax.checked = true
+	)
+	on btn_Ymax changed state do
+	( 
+		btn_Axis_off() 
+		btn_Ymax.checked = true
+	)
+	on btn_Zmax changed state do
+	( 
+		btn_Axis_off() 
+		btn_Zmax.checked = true
+	)
+	on btn_Xmin changed state do
+	( 
+		btn_Axis_off() 
+		btn_Xmin.checked = true
+	)
+	on btn_Ymin changed state do
+	( 
+		btn_Axis_off() 
+		btn_Ymin.checked = true
+	)
+	on btn_Zmin changed state do
+	( 
+		btn_Axis_off() 
+		btn_Zmin.checked = true
+	)
+)
+
+createDialog mipollPlacementRollout style:#(#style_titlebar, #style_sysmenu)
+-- SetDialogPos mipollPlacementRollout [100,200]
